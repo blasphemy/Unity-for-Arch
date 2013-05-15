@@ -3,7 +3,7 @@
 # * add workaround for qt4-ubuntu
 # * add error detection
 # * check for root if installing
-while getopts ednhbp:is: opt; do
+while getopts eDdnhbp:is: opt; do
 	case $opt in
 		n)
 			NOCONFIRM=true
@@ -38,6 +38,10 @@ while getopts ednhbp:is: opt; do
 			STARTPKG=$OPTARG
 			;;
 		d)	DOWNLOAD=true
+			;;
+		D)
+			DOWNLOAD=true
+			VERBOSE=true
 	esac
 done
 
@@ -75,7 +79,11 @@ for package in "${packages[@]}"; do
 		makepkg --nocheck -fc
 	elif [ "$DOWNLOAD" == "true" ]; then
 		echo "Downloading ${package}..."
-		makepkg -g &> /dev/null
+		if [ "$VERBOSE" == "true" ]; then
+			makepkg -g
+		else
+			makepkg -g &> /dev/null
+		fi
 	else
 		makepkg --nocheck -fsic
 	fi
