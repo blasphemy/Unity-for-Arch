@@ -17,6 +17,7 @@ while getopts eDdnhbp:is: opt; do
 			echo "-i [package-name] ignore certain package"
 			echo "-s [package-name] start at package"
 			echo "-d only download required sources (do not build or install)"
+			echo "-D only download required sources with verbose output"
 			echo "-e stop on error "
 			exit
 			;;
