@@ -11,6 +11,10 @@
 # LOCALREPO="/path/to/${REPO}/@ARCH@" # The @ARCH@ is required
 # OTHERREPOS=('Unity-for-Arch::file:///path/to/repo/@ARCH@'
 #             'My-Favorite-Repo::http://www.something.org/pub/@ARCH@')
+# USE_CCACHE="true"
+# CCACHE_DIR="/path/to/ccache/cache/@ARCH@" # The @ARCH@ is required
+# # Note that this script will change the ownership of ${CCACHE_DIR} to
+# # 10000:10000 with permissions 0755.
 
 ################################################################################
 
@@ -147,7 +151,15 @@ else
   PROGRESSBAR="--noprogressbar"
 fi
 
+CCACHE_DIR=""
 source "${CONFIG_FILE}"
+
+if [ "x${USE_CCACHE}" = "xtrue" ]; then
+  CHROOT_PACKAGES+=('ccache')
+  CCACHE_DIR=${CCACHE_DIR/@ARCH@/${ARCH}}
+  mkdir -p "${CCACHE_DIR}"
+  chown -R 10000:10000 "${CCACHE_DIR}"
+fi
 
 LOCALREPO=${LOCALREPO/@ARCH@/${ARCH}}
 
@@ -156,7 +168,7 @@ set -ex
 cleanup() {
   umount ${CHROOT}${LOCALREPO}/ || true &>/dev/null
 
-  for i in ${OTHERREPOS[@]}; do
+  for i in ${OTHERREPOS[@]} ${OTHERREPOS_PRE[@]}; do
     LOCATION=${i#*::}
     TYPE=${LOCATION%://*}
     LOCATION=${LOCATION#*://}
@@ -165,6 +177,10 @@ cleanup() {
       umount ${CHROOT}${LOCATION}/ || true &>/dev/null
     fi
   done
+
+  if [ "x${USE_CCACHE}" = "xtrue" ]; then
+    umount ${CHROOT}${CCACHE_DIR}/ || true &>/dev/null
+  fi
 
   # Clean up chroot
   if [ "x${KEEP_ROOT}" != "xtrue" ]; then
@@ -310,6 +326,10 @@ GPGKEY="${GPGKEY}"
 MAKEFLAGS="${MAKEFLAGS}"
 EOF
 
+if [ "x${USE_CCACHE}" = "xtrue" ]; then
+  sed -i '/^\s*BUILDENV/ s/!ccache/ccache/g' ${CHROOT}/etc/makepkg.conf
+fi
+
 for i in ${OTHERREPOS[@]}; do
   i=${i/@ARCH@/${ARCH}}
   cat >> ${CHROOT}/etc/pacman.conf << EOF
@@ -317,6 +337,15 @@ for i in ${OTHERREPOS[@]}; do
 SigLevel = Never
 Server = ${i#*::}
 EOF
+done
+
+for i in ${OTHERREPOS_PRE[@]}; do
+  i=${i/@ARCH@/${ARCH}}
+  sed -i "/^\[core\]/ i\\
+[${i%::*}] \\
+SigLevel = Never \\
+Server = ${i#*::} \\
+" ${CHROOT}/etc/pacman.conf
 done
 
 # Copy packaging
@@ -341,7 +370,7 @@ for i in ${extrafiles}; do
 done
 
 # Create new user
-mkarchroot -r "useradd --create-home --shell /bin/bash --user-group builder" \
+mkarchroot -r "useradd --create-home --shell /bin/bash --user-group builder -u 10000" \
            -c ${CACHE_DIR} ${CHROOT}
 
 # Fix permissions
@@ -356,7 +385,7 @@ echo "builder ALL=(ALL) ALL,NOPASSWD: /usr/bin/pacman" \
 # Make sure local repo exists
 mkdir -p ${LOCALREPO}/ ${CHROOT}${LOCALREPO}/
 mount --bind ${LOCALREPO}/ ${CHROOT}${LOCALREPO}/
-for i in ${OTHERREPOS[@]}; do
+for i in ${OTHERREPOS[@]} ${OTHERREPOS_PRE[@]}; do
   LOCATION=${i#*::}
   TYPE=${LOCATION%://*}
   LOCATION=${LOCATION#*://}
@@ -367,11 +396,18 @@ for i in ${OTHERREPOS[@]}; do
   fi
 done
 
+if [ "x${USE_CCACHE}" = "xtrue" ]; then
+  mkdir -p ${CHROOT}${CCACHE_DIR}/
+  chown -R 10000:10000 ${CHROOT}${CCACHE_DIR}/
+  mount --bind ${CCACHE_DIR}/ ${CHROOT}${CCACHE_DIR}/
+fi
+
 # Must lock the local repo or (local repo) packages may be deleted as they are
 # being downloaded
 (
   flock 123 || (echo "Failed to acquire lock on local repo!" && exit 1)
-  if [ -f "${LOCALREPO}/${REPO}.db" ] || [ ! -z "${OTHERREPOS[@]}" ]; then
+  if [ -f "${LOCALREPO}/${REPO}.db" ] || [[ ! -z "${OTHERREPOS[@]}" ]] \
+                                      || [[ ! -z "${OTHERREPOS_PRE[@]}" ]]; then
     # Set up /etc/pacman.conf if local repo already exists
     # TODO: Enable signature verification
     if [ -f "${LOCALREPO}/${REPO}.db" ]; then
@@ -388,7 +424,7 @@ EOF
 
   # Download sources and install build dependencies
   cat > ${CHROOT}/stage1.sh << EOF
-su - builder -c 'cd /tmp/${PACKAGE} && \\
+su - builder -c 'export CCACHE_DIR="${CCACHE_DIR}" && cd /tmp/${PACKAGE} && \\
                  makepkg --syncdeps --nobuild --nocolor \\
                          --noconfirm ${PROGRESSBAR}'
 EOF
@@ -412,7 +448,7 @@ setarch ${ARCH} mkarchroot \
 # Build package
 # TODO: Enable signing
 cat > ${CHROOT}/stage3.sh << EOF
-su - builder -c 'cd /tmp/${PACKAGE} && \\
+su - builder -c 'export CCACHE_DIR="${CCACHE_DIR}" && cd /tmp/${PACKAGE} && \\
                  makepkg --clean --check --noconfirm --nocolor --noextract \\
                  ${PROGRESSBAR}'
 EOF

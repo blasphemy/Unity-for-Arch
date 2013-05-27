@@ -6,7 +6,7 @@ pkgname=indicator-application
 _actual_ver=12.10.1
 _extra_ver=daily13.01.25
 pkgver=${_actual_ver}${_extra_ver}
-pkgrel=104
+pkgrel=105
 pkgdesc="A library and indicator to take menus from applications and place them in the panel"
 arch=('i686' 'x86_64')
 url="https://launchpad.net/indicator-application"
@@ -30,7 +30,7 @@ build() {
   cd "${srcdir}/${pkgname}-${_actual_ver}${_extra_ver}"
 
   autoreconf -vfi
-  ./configure --prefix=/usr --libexecdir=/usr/share/${pkgname} --disable-static
+  ./configure --prefix=/usr --libexecdir=/usr/lib/${pkgname} --disable-static
   make
 }
 

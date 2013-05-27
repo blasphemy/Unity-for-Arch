@@ -5,9 +5,9 @@ _actual_ver=0.3.14
 _extra_ver=daily13.04.15
 _translations=20130418
 pkgver=${_actual_ver}.${_extra_ver}
-pkgrel=101
+pkgrel=102
 pkgdesc="Unity Video lens"
-arch=('any')
+arch=('i686' 'x86_64')
 url="https://launchpad.net/unity-lens-videos"
 license=('GPL')
 depends=('dee' 'json-glib' 'libgee' 'libsoup-gnome' 'libunity' 'libzeitgeist' 'unity-lens-music')
@@ -40,7 +40,7 @@ build() {
 
   autoreconf -vfi
   intltoolize -f
-  ./configure --prefix=/usr --enable-headless-tests
+  ./configure --prefix=/usr --libexecdir=/usr/lib --enable-headless-tests
   make
 }
 

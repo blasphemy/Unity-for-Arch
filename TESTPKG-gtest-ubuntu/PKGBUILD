@@ -3,7 +3,7 @@
 pkgname=gtest-ubuntu
 pkgver=1.6.0
 _ubuntu_rel=1ubuntu6
-pkgrel=3
+pkgrel=4
 pkgdesc="Google's framework for writing C++ tests"
 arch=('any')
 url="http://code.google.com/p/googletest/"
@@ -49,6 +49,8 @@ package() {
   cp -a src/           "${pkgdir}/usr/src/gtest/"
   cp -a CMakeLists.txt "${pkgdir}/usr/src/gtest/"
   cp -a cmake/         "${pkgdir}/usr/src/gtest/"
+
+  install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
 
 # vim:set ts=2 sw=2 et:
