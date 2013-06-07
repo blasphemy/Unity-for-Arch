@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# TODO: Must update host cache before downloading!!!
-
 # Please add the following to build-in-chroot.conf:
 # 
 # PACKAGER="Your Name <your@email>"
@@ -39,7 +37,6 @@ show_help() {
   echo "  -r,--keeproot Do not delete chroot after building"
 }
 
-MKARCHROOT_SUPPORTED=('77d275572875542cbbc08ad93c7e0319e6c10696262c5dd7f282d968c547dc172ae1cc56349e922f48e5a652408b621b10f2ec4756051dec15a3a294cd0e56d8')
 ARCH_SUPPORTED=('i686' 'x86_64')
 ARCH=""
 PACKAGE_DIR=""
@@ -110,19 +107,6 @@ for i in ${ARCH_SUPPORTED[@]}; do
 done
 if [ "x${SUPPORTED}" != "xtrue" ]; then
   echo "Unsupported architecture ${ARCH}!"
-  exit 1
-fi
-
-# Make sure the version of mkarchroot is supported
-SUPPORTED=false
-for i in ${MKARCHROOT_SUPPORTED[@]}; do
-  if echo "${i} /usr/sbin/mkarchroot" | sha512sum -c --status; then
-    SUPPORTED=true
-    break
-  fi
-done
-if [ "x${SUPPORTED}" != "xtrue" ]; then
-  echo "Unsupported version of mkarchroot!"
   exit 1
 fi
 
@@ -264,58 +248,44 @@ chmod -R 0755 ${CACHE_DIR}
   pacman --arch ${ARCH} --sync --refresh --downloadonly --noconfirm \
          --root ${TEMP_CHROOT} --cachedir /var/cache/pacman/pkg/ ${list}
 
-  # Copy /var/cache/pacman/pkg/ to the chroot-specific cache directory
-  cp /var/cache/pacman/pkg/*-${ARCH}.pkg.tar.xz ${CACHE_DIR}/
-  cp /var/cache/pacman/pkg/*-any.pkg.tar.xz ${CACHE_DIR}/
+  # Copy or hard link cached packages to the chroot-specific cache directory
+  if [ "x$(stat -c '%d' /var/cache/pacman/pkg/)" = \
+       "x$(stat -c '%d' ${CACHE_DIR})" ]; then
+    ln /var/cache/pacman/pkg/*-${ARCH}.pkg.tar.xz ${CACHE_DIR}/
+    ln /var/cache/pacman/pkg/*-any.pkg.tar.xz ${CACHE_DIR}/
+  else
+    cp /var/cache/pacman/pkg/*-${ARCH}.pkg.tar.xz ${CACHE_DIR}/
+    cp /var/cache/pacman/pkg/*-any.pkg.tar.xz ${CACHE_DIR}/
+  fi
 ) 321>$(dirname ${0})/cache.lock
 
 ################################################################################
 
 ### Create chroot ##############################################################
 
-# Copy and patch mkarchroot to readd the '-f' functionality. This avoids
-# potential issues when building two packages in the same directory. The base64
-# is the encoded form of reverse of the patch for commit:
-#
-#   97a2d2414a7f9d4abce3a40320fe9e0883155884
-#
-# in https://projects.archlinux.org/devtools.git
-mkarchroot_initial() {
-  TEMP_MKARCHROOT=$(mktemp --tmpdir=$(pwd))
-  cat /usr/sbin/mkarchroot > ${TEMP_MKARCHROOT}
-  TEMP_MKARCHROOT=$(basename ${TEMP_MKARCHROOT})
-  (echo -e "--- ${TEMP_MKARCHROOT}.bak\n+++ ${TEMP_MKARCHROOT}" && \
-   base64 -d << EOF
-QEAgLTE0NCw2ICsxNDQsNyBAQAogCiBDSFJPT1RfVkVSU0lPTj0ndjMnCiAKK0ZPUkNFPSduJwog
-UlVOPScnCiBOT0NPUFk9J24nCiAKQEAgLTE1Nyw2ICsxNTgsNyBAQAogCWVjaG8gJyBvcHRpb25z
-OicKIAllY2hvICcgICAgLXIgPGFwcD4gICAgICBSdW4gImFwcCIgd2l0aGluIHRoZSBjb250ZXh0
-IG9mIHRoZSBjaHJvb3QnCiAJZWNobyAnICAgIC11ICAgICAgICAgICAgVXBkYXRlIHRoZSBjaHJv
-b3QgdmlhIHBhY21hbicKKwllY2hvICcgICAgLWYgICAgICAgICAgICBGb3JjZSBvdmVyd3JpdGUg
-b2YgZmlsZXMgaW4gdGhlIHdvcmtpbmctZGlyJwogCWVjaG8gJyAgICAtQyA8ZmlsZT4gICAgIExv
-Y2F0aW9uIG9mIGEgcGFjbWFuIGNvbmZpZyBmaWxlJwogCWVjaG8gJyAgICAtTSA8ZmlsZT4gICAg
-IExvY2F0aW9uIG9mIGEgbWFrZXBrZyBjb25maWcgZmlsZScKIAllY2hvICcgICAgLW4gICAgICAg
-ICAgICBEbyBub3QgY29weSBjb25maWcgZmlsZXMgaW50byB0aGUgY2hyb290JwpAQCAtMTY5LDYg
-KzE3MSw3IEBACiAJY2FzZSAiJHthcmd9IiBpbgogCQlyKSBSVU49IiRPUFRBUkciIDs7CiAJCXUp
-IFJVTj0ncGFjbWFuIC1TeXUgLS1ub2NvbmZpcm0nIDs7CisJCWYpIEZPUkNFPSd5JyA7OwogCQlD
-KSBwYWNfY29uZj0iJE9QVEFSRyIgOzsKIAkJTSkgbWFrZXBrZ19jb25mPSIkT1BUQVJHIiA7Owog
-CQluKSBOT0NPUFk9J3knIDs7CkBAIC0yODEsOCArMjg0LDggQEAKIAkjIH19fQogZWxzZQogCSMg
-e3t7IGJ1aWxkIGNocm9vdAotCWlmIFtbIC1lICR3b3JraW5nX2RpciBdXTsgdGhlbgotCQlkaWUg
-IldvcmtpbmcgZGlyZWN0b3J5ICcke3dvcmtpbmdfZGlyfScgYWxyZWFkeSBleGlzdHMiCisJaWYg
-W1sgLWUgJHdvcmtpbmdfZGlyICYmICRGT1JDRSA9ICduJyBdXTsgdGhlbgorCQlkaWUgIldvcmtp
-bmcgZGlyZWN0b3J5ICcke3dvcmtpbmdfZGlyfScgYWxyZWFkeSBleGlzdHMgLSB0cnkgdXNpbmcg
-LWYiCiAJZmkKIAogCW1rZGlyIC1wICIke3dvcmtpbmdfZGlyfSIKQEAgLTMwMiw2ICszMDUsOSBA
-QAogCQlwYWNhcmdzKz0oIi0tY29uZmlnPSR7cGFjX2NvbmZ9IikKIAlmaQogCisJaWYgW1sgJEZP
-UkNFID0gJ3knIF1dOyB0aGVuCisJCXBhY2FyZ3MrPSgiLS1mb3JjZSIpCisJZmkKIAlpZiAhIHBh
-Y3N0cmFwIC1HTWNkICIke3dvcmtpbmdfZGlyfSIgIiR7cGFjYXJnc1tAXX0iICIkQCI7IHRoZW4K
-IAkJZGllICdGYWlsZWQgdG8gaW5zdGFsbCBhbGwgcGFja2FnZXMnCiAJZmkK
-EOF
-) | patch -p0
-  cat ${TEMP_MKARCHROOT} | setarch ${ARCH} bash -s -- ${*}
-  rm ${TEMP_MKARCHROOT}
-}
-
 # Create base chroot
-mkarchroot_initial -f -c ${CACHE_DIR} ${CHROOT} ${CHROOT_PACKAGES[@]}
+setarch ${ARCH} pacstrap -GMcd ${CHROOT} --cachedir=${CACHE_DIR} \
+                         ${CHROOT_PACKAGES[@]}
+
+# Set up systemd-nspawn arguments
+NSPAWN_ARGS=("--directory=${CHROOT}")
+
+# Cache directory
+NSPAWN_ARGS+=("--bind=${CACHE_DIR}")
+sed -i -r "s|^#?\\s*CacheDir.+|CacheDir = ${CACHE_DIR}|g" \
+  ${CHROOT}/etc/pacman.conf
+
+# Copy pacman keyring
+cp -a /etc/pacman.d/gnupg/ ${CHROOT}/etc/pacman.d/
+
+# Copy mirrorlist
+cp /etc/pacman.d/mirrorlist ${CHROOT}/etc/pacman.d/
+
+# Set up locale
+sed -i '1i en_US.UTF-8 UTF-8' ${CHROOT}/etc/locale.gen
+echo 'LANG=C' > ${CHROOT}/etc/locale.gen
+setarch ${ARCH} systemd-nspawn ${NSPAWN_ARGS[@]} \
+                locale-gen
 
 # Set up /etc/makepkg.conf
 cat >> ${CHROOT}/etc/makepkg.conf << EOF
@@ -370,13 +340,14 @@ for i in ${extrafiles}; do
 done
 
 # Create new user
-mkarchroot -r "useradd --create-home --shell /bin/bash --user-group builder -u 10000" \
-           -c ${CACHE_DIR} ${CHROOT}
+setarch ${ARCH} systemd-nspawn ${NSPAWN_ARGS[@]} \
+                useradd --create-home --shell /bin/bash --user-group builder \
+                        -u 10000
 
 # Fix permissions
 mkdir ${CHROOT}${RESULT_DIR}/
-mkarchroot -r "chown -R builder:builder ${RESULT_DIR} /tmp/${PACKAGE}/" \
-           -c ${CACHE_DIR} ${CHROOT}
+setarch ${ARCH} systemd-nspawn ${NSPAWN_ARGS[@]} \
+                chown -R builder:builder ${RESULT_DIR} /tmp/${PACKAGE}/
 
 # Make sure the builder user can run "pacman" to install the build dependencies
 echo "builder ALL=(ALL) ALL,NOPASSWD: /usr/bin/pacman" \
@@ -418,8 +389,8 @@ Server = file://$(readlink -f ${LOCALREPO})
 EOF
     fi
 
-    setarch ${ARCH} mkarchroot -r "pacman -Sy ${PROGRESSBAR}" \
-                               -c ${CACHE_DIR} ${CHROOT}
+    setarch ${ARCH} systemd-nspawn ${NSPAWN_ARGS[@]} \
+                    pacman -Sy ${PROGRESSBAR}
   fi
 
   # Download sources and install build dependencies
@@ -428,10 +399,8 @@ su - builder -c 'export CCACHE_DIR="${CCACHE_DIR}" && cd /tmp/${PACKAGE} && \\
                  makepkg --syncdeps --nobuild --nocolor \\
                          --noconfirm ${PROGRESSBAR}'
 EOF
-  setarch ${ARCH} mkarchroot \
-    -r 'sh /stage1.sh' \
-    -c ${CACHE_DIR} \
-    ${CHROOT}
+  setarch ${ARCH} systemd-nspawn ${NSPAWN_ARGS[@]} \
+                  sh /stage1.sh
 ) 123>${LOCALREPO}/repo.lock
 
 # Workaround makepkg bug for SCM packages
@@ -440,10 +409,8 @@ su - builder -c 'cd /tmp/${PACKAGE} && \\
                  find -maxdepth 1 -type d -empty -name src \
                       -exec touch {}/stupid-makepkg \\;'
 EOF
-setarch ${ARCH} mkarchroot \
-  -r 'sh /stage2.sh' \
-  -c ${CACHE_DIR} \
-  ${CHROOT}
+setarch ${ARCH} systemd-nspawn ${NSPAWN_ARGS[@]} \
+                sh /stage2.sh
 
 # Build package
 # TODO: Enable signing
@@ -452,10 +419,8 @@ su - builder -c 'export CCACHE_DIR="${CCACHE_DIR}" && cd /tmp/${PACKAGE} && \\
                  makepkg --clean --check --noconfirm --nocolor --noextract \\
                  ${PROGRESSBAR}'
 EOF
-setarch ${ARCH} mkarchroot \
-  -r 'sh /stage3.sh' \
-  -c ${CACHE_DIR} \
-  ${CHROOT}
+setarch ${ARCH} systemd-nspawn ${NSPAWN_ARGS[@]} \
+                sh /stage3.sh
 
 ################################################################################
 
@@ -479,6 +444,13 @@ echo "Attempting to acquire lock on local repo..."
   #   0ubuntu10 0ubuntu11 0ubuntu9
   # causing repo-add to only add 0ubuntu9 when it should clearly add 0ubuntu11
   paccache -vvv -k 1 -r -c ${LOCALREPO}/ || true
+
+  # Avoid the epoch colon in the filename
+  for i in ${LOCALREPO}/*.pkg.tar.xz; do
+    if [ "x${i}" != "x${i/:/_}" ]; then
+      mv ${i} ${i/:/_}
+    fi
+  done
 
   # TODO: Enable signing
   repo-add ${LOCALREPO}/${REPO}.db.tar.xz ${LOCALREPO}/*.pkg.tar.xz
