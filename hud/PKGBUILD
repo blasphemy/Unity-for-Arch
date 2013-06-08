@@ -21,6 +21,15 @@ source=("https://launchpad.net/ubuntu/+archive/primary/+files/hud_${_actual_ver}
 sha512sums=('111251dd0b1f6f02f9a53c5dc0696e3d1358ae361e1bdb766ac5871b29958d45eb278e3fdf4e95dc4d274c62834a161ad2f1a3a28f6d8e8b523ac75834dd901c')
 
 build() {
+
+  #to disable tests if dbus-test-runner isn't installed
+  if pacman -Q dbus-test-runner &>/dev/null; then
+    _dbustest=ON
+  else
+    _dbustest=OFF
+    msg "dbus-test-runner is not installed, disabling tests"
+  fi
+
   cd "${srcdir}/${pkgname}-${_actual_ver}${_extra_ver}"
 
   mkdir build && cd build
@@ -29,7 +38,7 @@ build() {
     -DCMAKE_INSTALL_LIBDIR=/usr/lib \
     -DCMAKE_INSTALL_LIBEXECDIR=/usr/lib \
     -DENABLE_DOCUMENTATION=ON \
-    -DENABLE_TESTS=ON \
+    -DENABLE_TESTS=${_dbustest} \
     -DENABLE_VOICE_TESTS=ON `# Off on Ubuntu` \
     -DENABLE_SCALABILITY_TESTS=ON \
     -DFULL_WARNINGS=ON
