@@ -7,7 +7,7 @@ pkgver=7.0.0
 _actual_ver="${pkgver}"
 _extra_ver="daily13.06.07"
 _translations=20130418
-pkgrel=100
+pkgrel=101
 
 if [ "${_UBUNTU}" == true ]; then
   _ubuntu_rel=0ubuntu1
@@ -18,7 +18,7 @@ pkgdesc="A desktop experience designed for efficiency of space and interaction"
 arch=('i686' 'x86_64')
 url="https://launchpad.net/unity"
 license=('GPL')
-depends=('bamf' 'boost' 'compiz-ubuntu' 'clutter-gtk' 'gjs' 'gnome-desktop' 'gnome-screensaver' 'gnome-session-ubuntu' 'hud>=13.10.1daily13.06.05.1' 'libgnomeui' 'libindicator' 'libindicator3' 'libnotify' 'libunique' 'libunity>=7.0.2' 'libunity-misc' 'libxfixes' 'libzeitgeist' 'nux>=4.0.2' 'unity-asset-pool' 'libxi>=1.7')
+depends=('bamf' 'boost' 'compiz-ubuntu' 'clutter-gtk' 'gjs' 'gnome-desktop' 'gnome-screensaver' 'gnome-session-ubuntu' 'hud>=13.10.1daily13.06.05.1' 'libgnomeui' 'libindicator' 'libindicator3' 'libnotify' 'libunique' 'libunity>=7.0.2daily13.06.06.1' 'libunity-misc' 'libxfixes' 'libzeitgeist' 'nux>=4.0.2' 'unity-asset-pool' 'libxi>=1.7' 'xpathselect')
 makedepends=('cmake' 'doxygen' 'intltool' 'patchutils' 'pkg-config' 'python2-distribute')
 checkdepends=('gtest-ubuntu' 'gmock-ubuntu')
 groups=('unity')
@@ -182,7 +182,7 @@ package() {
 
   # Arch Linux logo
   install -m644 "${srcdir}/launcher_bfb.png" \
-    "${pkgdir}/usr/share/unity/6/launcher_bfb.png"
+    "${pkgdir}/usr/share/unity/icons/launcher_bfb.png"
 
   # Check for missing GSettings schemas
   pushd "${pkgdir}/usr/share/glib-2.0/schemas/"

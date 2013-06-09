@@ -87,6 +87,11 @@ while true; do
   esac
 done
 
+if [ ! -x /usr/bin/pacstrap ]; then
+  echo "arch-install-scripts is not installed!"
+  exit 1
+fi
+
 if [ -z "${PACKAGE_DIR}" ]; then
   echo "No package was provided!"
   show_help
@@ -396,8 +401,8 @@ EOF
   # Download sources and install build dependencies
   cat > ${CHROOT}/stage1.sh << EOF
 su - builder -c 'export CCACHE_DIR="${CCACHE_DIR}" && cd /tmp/${PACKAGE} && \\
-                 makepkg --syncdeps --nobuild --nocolor \\
-                         --noconfirm ${PROGRESSBAR}'
+                 makepkg --syncdeps --nobuild --noextract --nocolor \\
+                         --noconfirm --skipinteg ${PROGRESSBAR}'
 EOF
   setarch ${ARCH} systemd-nspawn ${NSPAWN_ARGS[@]} \
                   sh /stage1.sh
@@ -416,7 +421,7 @@ setarch ${ARCH} systemd-nspawn ${NSPAWN_ARGS[@]} \
 # TODO: Enable signing
 cat > ${CHROOT}/stage3.sh << EOF
 su - builder -c 'export CCACHE_DIR="${CCACHE_DIR}" && cd /tmp/${PACKAGE} && \\
-                 makepkg --clean --check --noconfirm --nocolor --noextract \\
+                 makepkg --clean --check --noconfirm --nocolor \\
                  ${PROGRESSBAR}'
 EOF
 setarch ${ARCH} systemd-nspawn ${NSPAWN_ARGS[@]} \
