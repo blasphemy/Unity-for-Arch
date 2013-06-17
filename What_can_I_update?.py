@@ -496,9 +496,7 @@ def main():
     for j in i.get():
       if j.get_upgrade():
         if "pkgdir" in show:
-          print("Package base        : " + i.get_pkgbase())
-          print("  PKGBUILD version  : " + j.get_pkgver())
-          print("  Installed version : " + j.get_instver())
+          print(i.get_pkgbase())
           break
         else:
           print("Package name        : " + j.get_pkgname())
