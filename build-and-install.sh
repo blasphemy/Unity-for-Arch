@@ -3,7 +3,9 @@
 # * add workaround for qt4-ubuntu
 # * add error detection
 # * check for root if installing
-while getopts eDdnhbp:is: opt; do
+
+packages=($(./What_can_I_update\?.py -l | grep -v qt4-ubuntu))
+while getopts ueDdnhbp:is: opt; do
 	case $opt in
 		n)
 			NOCONFIRM=true
@@ -18,7 +20,8 @@ while getopts eDdnhbp:is: opt; do
 			echo "-s [package-name] start at package"
 			echo "-d only download required sources (do not build or install)"
 			echo "-D only download required sources with verbose output"
-			echo "-e stop on error "
+			echo "-e stop on error"
+			echo "-u only build and install packages that can be updated-- defined by What_can_I_update?.py"
 			exit
 			;;
 		e)
@@ -43,6 +46,10 @@ while getopts eDdnhbp:is: opt; do
 		D)
 			DOWNLOAD=true
 			VERBOSE=true
+			;;
+		u)
+			UPDATE=true
+			packages=($(./What_can_I_update\?.py -d | grep -v qt4-ubuntu))
 	esac
 done
 
@@ -55,7 +62,6 @@ if [ "$NOINSTALL" == true ]; then
 fi
 
 
-packages=($(./What_can_I_update\?.py -l | grep -v qt4-ubuntu))
 for package in "${packages[@]}"; do
 	if [ "$NOSTART" == "true" ]; then
 		if [ "${package}" != "$STARTPKG" ]; then
