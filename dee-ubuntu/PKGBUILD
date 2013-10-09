@@ -1,10 +1,10 @@
 # Maintainer: Xiao-Long Chen <chenxiaolong@cxl.epac.to>
 
 pkgname=dee-ubuntu
-_actual_ver=1.2.6
-_extra_ver=+13.10.20130722
+_actual_ver=1.2.7
+_extra_ver=+13.10.20130924.1
 pkgver=${_actual_ver}${_extra_ver/+/.}
-pkgrel=1
+pkgrel=2
 pkgdesc="Model to synchronize multiple instances over DBus"
 arch=('i686' 'x86_64')
 url="https://launchpad.net/dee"
@@ -12,11 +12,10 @@ license=('LGPL')
 groups=('unity')
 depends=('dbus-glib' 'glib2' 'icu' 'python' 'python-gobject' 'python2' 'python2-gobject')
 makedepends=('gnome-common' 'gobject-introspection' 'gtk-doc' 'vala')
-checkdepends=('dbus-test-runner')
 provides=("dee=${pkgver}")
 conflicts=('dee')
 source=("https://launchpad.net/ubuntu/+archive/primary/+files/dee_${_actual_ver}${_extra_ver}.orig.tar.gz")
-sha512sums=('5186b8893dca98c53e5e73178302b42449b3ea02d6927f89b0d934a22eba89ee6cd263792fb10fb406183fcd8e40fe21dad465fd45aeaf78f36e7be549ef406f')
+sha512sums=('f59f0db206e4768999ab0977bbc98f60042946ed07380a7c3b4803f5dd90d63904999e6fe1042d642cadc44e0c58299ee4f4135fa02038fe38916a5618ec7e19')
 
 build() {
   cd "${srcdir}/dee-${_actual_ver}${_extra_ver}"
@@ -30,11 +29,6 @@ build() {
 
   mkdir build-python2 && cd build-python2
   PYTHON=python2 ../configure --prefix=/usr
-}
-
-check() {
-  cd "${srcdir}/dee-${_actual_ver}${_extra_ver}/build-python3"
-  make check || true
 }
 
 package() {

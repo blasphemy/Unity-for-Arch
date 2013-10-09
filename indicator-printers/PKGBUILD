@@ -6,7 +6,7 @@ _actual_ver=0.1.7
 _extra_ver=daily13.03.01
 _translations=20130418
 pkgver=${_actual_ver}${_extra_ver}
-pkgrel=104
+pkgrel=105
 pkgdesc="Indicator showing active print jobs"
 arch=('i686' 'x86_64')
 url="https://launchpad.net/indicator-printers"
@@ -45,12 +45,6 @@ build() {
   intltoolize -f
   ./configure --prefix=/usr --libexecdir=/usr/lib/${pkgname} --disable-static
   make
-}
-
-check() {
-  cd "${srcdir}/${pkgname}-${_actual_ver}${_extra_ver}"
-
-  make check
 }
 
 package() {

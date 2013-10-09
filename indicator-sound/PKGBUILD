@@ -4,26 +4,30 @@
 
 pkgname=indicator-sound
 _actual_ver=12.10.2
-_extra_ver=+13.10.20130731
+_extra_ver=+13.10.20131004
 _translations=20130418
-pkgver=${_actual_ver}daily13.07.31
-pkgrel=100
+pkgver=${_actual_ver}daily13.10.04
+pkgrel=101
 pkgdesc="A unified sound menu"
 arch=('i686' 'x86_64')
 url="https://launchpad.net/indicator-sound"
 license=('GPL')
 depends=('libpulse' 'libgee06' 'libxml2' 'dconf')
-makedepends=('intltool' 'vala')
+makedepends=('cmake' 'intltool' 'vala')
 groups=('unity')
 options=('!libtool')
 install=${pkgname}.install
 source=("https://launchpad.net/ubuntu/+archive/primary/+files/indicator-sound_${_actual_ver}${_extra_ver}.orig.tar.gz"
-        "https://dl.dropboxusercontent.com/u/486665/Translations/translations-${_translations}-indicator-sound.tar.gz")
-sha512sums=('580095e7afe4a7312e8366550c39616b1c890c888ea2619a4aeaa0bbb58ed01e061d7d7111b7cd60bc1bc08ea557ebe75b6eda323786dd4b3367deedd0748878'
-            '88578aab046cc6e87e015e414b21cf06ab51d26ee932e4213c4e532fd70f373fb03257c5d7b2bbcddbc852816dd1206b934ff9dc4d65dbac3325b382553230b0')
+        "https://dl.dropboxusercontent.com/u/486665/Translations/translations-${_translations}-indicator-sound.tar.gz"
+        '0001_Not_a_phone.patch')
+sha512sums=('e32df78906f67a230ab7d1f55f2f1d3545324078d86d192db483e43da124f2c4bf3bb681e7e282f48b64ddd0b0a3c0776fb1c49ea46f2e53eb50e3e390f9e824'
+            '88578aab046cc6e87e015e414b21cf06ab51d26ee932e4213c4e532fd70f373fb03257c5d7b2bbcddbc852816dd1206b934ff9dc4d65dbac3325b382553230b0'
+            '3ca63afb388afb5f32a5ad090db3cc50d40a48deb5bdf206cde6c92963481dcc244157560908613255801c2f09058111f66b6774216f5272f197371b64fd2ece')
 
 prepare() {
   cd "${srcdir}/${pkgname}-${_actual_ver}${_extra_ver}"
+
+  patch -p1 -i "${srcdir}/0001_Not_a_phone.patch"
 
   msg "Merging translations from ${_translations}"
   rm -f po/LINGUAS po/*.pot
@@ -31,30 +35,36 @@ prepare() {
   for i in "${srcdir}"/po/*.po; do
     FILE=$(sed -n "s|.*/${pkgname}-||p" <<< ${i})
     mv ${i} po/${FILE}
-    echo ${FILE%.*} >> po/LINGUAS
   done
 }
 
 build() {
   cd "${srcdir}/${pkgname}-${_actual_ver}${_extra_ver}"
 
-  autoreconf -vfi
-  intltoolize -f
-
-  ./configure --prefix=/usr --libexecdir=/usr/lib/${pkgname} --disable-static --disable-schemas-compile
-  make -j1
+  mkdir build && cd build
+  cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBEXECDIR=lib
+  make
 }
 
 check() {
-  cd "${srcdir}/${pkgname}-${_actual_ver}${_extra_ver}/"
+  cd "${srcdir}/${pkgname}-${_actual_ver}${_extra_ver}/build/"
 
-  make check
+  ctest
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-${_actual_ver}${_extra_ver}/"
+  cd "${srcdir}/${pkgname}-${_actual_ver}${_extra_ver}/build/"
 
   make DESTDIR="${pkgdir}/" install
+
+  # Please fix CMake scripts, Ubuntu...
+  for i in ../po/*.po; do
+    FILELANG=$(basename ${i})
+    FILELANG=${FILELANG%.po}
+    install -dm755 "${pkgdir}/usr/share/locale/${FILELANG}/LC_MESSAGES/"
+    msgfmt -v ${i} -o \
+      "${pkgdir}/usr/share/locale/${FILELANG}/LC_MESSAGES/indicator-sound.mo"
+  done
 }
 
 # vim:set ts=2 sw=2 et:

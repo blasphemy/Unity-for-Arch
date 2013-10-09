@@ -3,18 +3,17 @@
 # Contributor: thn81 <root@scrat>
 
 pkgname=libunity
-_actual_ver=7.0.9
-_extra_ver=+13.10.20130729
+_actual_ver=7.1.2
+_extra_ver=+13.10.20131003
 _ubuntu_rel=0ubuntu1
 pkgver=${_actual_ver}${_extra_ver/+/.}
-pkgrel=100
+pkgrel=101
 pkgdesc="A library for instrumenting and integrating with all aspects of the Unity shell"
 arch=('i686' 'x86_64')
 url="https://launchpad.net/libunity"
 license=('LGPL')
 depends=('libgee06' 'dee-ubuntu' 'libdbusmenu' 'gtk3')
 makedepends=('intltool' 'vala' 'python2' 'gobject-introspection' 'vala0.18')
-checkdepends=('python2-gobject' 'xorg-server-xvfb' 'xorg-xauth')
 install=${pkgname}.install
 groups=('unity')
 options=('!libtool')
@@ -22,8 +21,8 @@ source=("https://launchpad.net/ubuntu/+archive/primary/+files/libunity_${_actual
         "https://launchpad.net/ubuntu/+archive/primary/+files/libunity_${_actual_ver}${_extra_ver}-${_ubuntu_rel}.diff.gz"
         '0001_autoconf.patch'
         '0002_privacy_by_default.patch')
-sha512sums=('6129b032963c2b51dd2e30775eb99005ca65304d0018a8ae25f0ddd33746b26c402bfedd119f725d9af78d8a41de38155b0f53cc47e492e81702707b44016c9e'
-            'a0ed870eda484642c18fd5c56d5caadcb86b0b7aed831e1493c938c652149ba87beac837092f25e5390d1dc2167de2d2f24b0fee0bfb31664762bccfd3701126'
+sha512sums=('bf9956399319d628f552bb51af611e85b1d8d328cda714c1990bdd62aef5a12e29a93aba80d70a127e2e2bc74e9d3b6a14a39d292767a2fe62ee679772953560'
+            '0723db0e0d46fb17b8636103f2d8a6f72839d787a2b67aa158586d09ff81fd125c2fbc562a5ec498bb894a19e3e6fc17ae9e696afb4b6e4fb9dc5896626b6561'
             '1570c01f4c8ac53bc7806fad78691844a12625b7142270b5a215d203618acc76ba258c4aa969a120186ba9224b726f20a2a9efad05940ffdaa258be49844fa4b'
             '83769f9f54abb8090d5307affba8f974a23ee11dac74d9c3da389b48c9bd80fac241731017c9dcb05af14d4c644228d67af558e97972fceb144a8fc0deed30f7')
 
@@ -57,22 +56,6 @@ build() {
   ./configure --prefix=/usr --disable-static --enable-headless-tests PYTHON=python2
   export MAKEFLAGS="-j1"
   make
-}
-
-check() {
-  cd "${srcdir}/${pkgname}-${_actual_ver}${_extra_ver}"
-
-  #export XDG_DATA_DIRS="$(pwd)/test/data:${XDG_DATA_DIRS}"
-
-  # test-appinfo-manager is failing: something really bad is probably going to
-  # happen
-  sed -i -e '/\/Unit\/AppInfoManager\/SyncLookupOk/d' \
-         -e '/AppInfoManagerSuite\.test_sync_lookup_ok/d' \
-         -e '/\/Unit\/AppInfoManager\/AsyncLookupOk/d' \
-         -e '/AppInfoManagerSuite\.test_async_lookup_ok/d' \
-         test/vala/test-appinfo-manager.vala
-
-  make check || :
 }
 
 package() {

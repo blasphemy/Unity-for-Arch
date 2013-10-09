@@ -4,7 +4,7 @@ pkgname=unity-gtk-module
 _actual_ver=0.0.0
 _extra_ver=+13.10.20130716.1
 pkgver=${_actual_ver}daily13.07.16.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Unity GTK+ Module"
 arch=('i686' 'x86_64')
 url="https://launchpad.net/unity-gtk-module"
@@ -38,18 +38,6 @@ build() {
   ../configure --prefix=/usr --sysconfdir=/etc --with-gtk=3 --enable-gtk-doc \
                --disable-static
   make
-  popd
-}
-
-check() {
-  cd "${srcdir}/${pkgname}-${_actual_ver}${_extra_ver}"
-
-  pushd build-gtk2
-  make check
-  popd
-
-  pushd build-gtk3
-  make check
   popd
 }
 

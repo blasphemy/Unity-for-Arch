@@ -4,12 +4,15 @@
 
 [ -z "${NO_GCC_UBUNTU}" ] && NO_GCC_UBUNTU=false
 
+# Settings panel not compatible with GNOME 3.10
+NO_GCC_UBUNTU=true
+
 pkgname=indicator-datetime
-_actual_ver=12.10.3
-_extra_ver=+13.10.20130731
+_actual_ver=13.10.0
+_extra_ver=+13.10.20131004
 _translations=20130418
-pkgver=${_actual_ver}daily13.07.31
-pkgrel=100
+pkgver=${_actual_ver}${_extra_ver/+/.}
+pkgrel=102
 pkgdesc="A very, very simple clock"
 arch=('i686' 'x86_64')
 url="https://launchpad.net/indicator-datetime"
@@ -21,17 +24,18 @@ else
   depends+=('gnome-control-center')
 fi
 makedepends=('intltool')
-checkdepends=('gtest-ubuntu' 'xorg-gtest' 'xorg-util-macros')
 groups=('unity')
 options=('!libtool')
 install=${pkgname}.install
 source=("https://launchpad.net/ubuntu/+archive/primary/+files/${pkgname}_${_actual_ver}${_extra_ver}.orig.tar.gz"
         "https://dl.dropboxusercontent.com/u/486665/Translations/translations-${_translations}-indicator-datetime.tar.gz"
         '0001_Port_to_systemd_timedated.patch'
+        '0002_Not_a_phone.patch'
         '0003_Link_pthread.patch')
-sha512sums=('0e9c0f3f7ebafcdf8c6c6f7193b581a7e31f7f1658985450d41a247970d0ee1c0ec8f33aea0dac00bafb96935904591c775ee88b9d3606966a8e98f7a0e3b056'
+sha512sums=('9ac57d52fb2f5178cce3bc377774214ab6d2513637106f2daf297416eb907b5acd1859270bf4a910e2c733879bff73e31d8c24f3f134b3025082f75b604cf3ee'
             '5cb8d7ab7cfb1e57d9b0d3e54e09caa1cbfdf44191f32e19251983e061bf5c27812dbcb743cad17cb4ff13e6f6f22167c6d3bd0f2faa8e5a84a7bf145f90223c'
             '57c0b1846c946bcc2fffd45b933c83fa7ef14e1e19e4431238be4a406bc6565aba5c80dabaed5fc8b46d83377c71d5d2c55331599813827fa70290a9f02dd51b'
+            '9a11f2b8da9b428b280e16982ab5770bb02b56f09d0b128aa8ceba83880960b608829280bc04854f07561d8ce47bf762dec2d7a7749981d72fbcad3cef638436'
             '5c10fda83393b33b45c1fd0701e464ac1e9cc3180c3d1ebb47f5e666e57065b64f34047c913f90db5d047ffef094fe0b4ef625fe04ebeefc74b341a8f6612cf2')
 
 prepare() {
@@ -39,6 +43,8 @@ prepare() {
 
   # Port to systemd's timedated
   #patch -p1 -i "${srcdir}/0001_Port_to_systemd_timedated.patch"
+
+  patch -p1 -i "${srcdir}/0002_Not_a_phone.patch"
 
   # Tests need to link against pthread
   #patch -p1 -i "${srcdir}/0003_Link_pthread.patch"
@@ -56,21 +62,19 @@ prepare() {
 build() {
   cd "${srcdir}/${pkgname}-${_actual_ver}${_extra_ver}"
 
+  GCCFLAG="--with-ccpanel=true"
   if [ "x${NO_GCC_UBUNTU}" = "xtrue" ]; then
     msg "NOT building GNOME Control Center panel"
+    GCCFLAG="--with-ccpanel=false"
   fi
+
+  export CFLAGS="${CFLAGS} -Wno-error"
 
   autoreconf -vfi
   intltoolize -f
 
-  ./configure --prefix=/usr --libexecdir=/usr/lib/${pkgname} --disable-static --disable-schemas-compile
+  ./configure --prefix=/usr --libexecdir=/usr/lib/${pkgname} --disable-static --disable-schemas-compile ${GCCFLAG}
   make -j1
-}
-
-check() {
-  cd "${srcdir}/${pkgname}-${_actual_ver}${_extra_ver}/"
-
-  make check
 }
 
 package() {

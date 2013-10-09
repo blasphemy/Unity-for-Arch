@@ -2,7 +2,7 @@
 
 pkgname=libtimezonemap
 pkgver=0.4.0
-pkgrel=1
+pkgrel=2
 pkgdesc="GTK+3 timezone map widget"
 arch=('i686' 'x86_64')
 url="https://launchpad.net/libtimezonemap"
@@ -19,11 +19,6 @@ build() {
   autoreconf -vfi
   ./configure --prefix=/usr --enable-introspection --with-gtk=3
   make
-}
-
-check() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
-  make check
 }
 
 package() {
